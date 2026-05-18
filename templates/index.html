@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTG Pactual — Monitor de Renda Fixa</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">BTG</div>
+    <div>
+      <div class="logo-name">BTG Pactual</div>
+      <div class="logo-sub">Monitor de Renda Fixa</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="header-date" id="headerDate"></span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════ MAIN ════════════════════════════ -->
+<main class="main">
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="debentures">Debêntures</button>
+    <button class="tab-btn" data-tab="cricra">CRI e CRA</button>
+  </div>
+
+  <!-- ─────────────── DEBÊNTURES TAB ─────────────── -->
+  <section class="tab-content active" id="tab-debentures">
+
+    <div class="section-header">
+      <div>
+        <h1 class="section-title">Debêntures</h1>
+        <p class="section-sub" id="deb-ref-date">Carregando…</p>
+      </div>
+      <div class="header-actions">
+        <select class="date-select" id="deb-date-select" title="Selecionar data"></select>
+        <label class="btn btn-outline" for="deb-file-input">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Carregar XLS
+        </label>
+        <input type="file" id="deb-file-input" accept=".xls,.xlsx" multiple />
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="deb-stats">
+      <div class="stat-card">
+        <div class="stat-label">Títulos</div>
+        <div class="stat-value" id="deb-count">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Taxa Mín.</div>
+        <div class="stat-value" id="deb-min-rate">—</div>
+        <div class="stat-desc">Taxa indicativa</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Taxa Máx.</div>
+        <div class="stat-value" id="deb-max-rate">—</div>
+        <div class="stat-desc">Taxa indicativa</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Duration Médio</div>
+        <div class="stat-value" id="deb-avg-dur">—</div>
+        <div class="stat-desc">Dias corridos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Datas Históricas</div>
+        <div class="stat-value" id="deb-hist-count">—</div>
+      </div>
+    </div>
+
+    <!-- Toolbar + Table -->
+    <div class="table-card">
+      <div class="table-toolbar">
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="search-input" id="deb-search" type="text" placeholder="Buscar código ou nome…" />
+        </div>
+        <select class="filter-select" id="deb-index-filter">
+          <option value="">Todos os índices</option>
+        </select>
+        <span class="record-count" id="deb-count-label"></span>
+      </div>
+
+      <div class="table-scroll">
+        <table class="data-table" id="deb-table">
+          <thead>
+            <tr>
+              <th data-col="codigo">Código</th>
+              <th data-col="nome">Nome</th>
+              <th data-col="vencimento">Repac./ Venc.</th>
+              <th data-col="indice">Índice/ Correção</th>
+              <th data-col="taxaCompra" class="num">Taxa Compra</th>
+              <th data-col="taxaVenda" class="num">Taxa Venda</th>
+              <th data-col="taxaIndicativa" class="num">Taxa Indicativa</th>
+              <th data-col="pu" class="num">PU</th>
+              <th data-col="puPar" class="num">% PU Par</th>
+              <th data-col="duration" class="num">Duration</th>
+            </tr>
+          </thead>
+          <tbody id="deb-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── CRI/CRA TAB ─────────────── -->
+  <section class="tab-content" id="tab-cricra">
+
+    <div class="section-header">
+      <div>
+        <h1 class="section-title">CRI e CRA</h1>
+        <p class="section-sub" id="cri-ref-date">Carregando…</p>
+      </div>
+      <div class="header-actions">
+        <select class="date-select" id="cri-date-select" title="Selecionar data"></select>
+        <label class="btn btn-outline" for="cri-file-input">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Carregar CSV
+        </label>
+        <input type="file" id="cri-file-input" accept=".csv" multiple />
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="cri-stats">
+      <div class="stat-card">
+        <div class="stat-label">Títulos</div>
+        <div class="stat-value" id="cri-count">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Taxa Mín.</div>
+        <div class="stat-value" id="cri-min-rate">—</div>
+        <div class="stat-desc">Taxa indicativa</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Taxa Máx.</div>
+        <div class="stat-value" id="cri-max-rate">—</div>
+        <div class="stat-desc">Taxa indicativa</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Duration Médio</div>
+        <div class="stat-value" id="cri-avg-dur">—</div>
+        <div class="stat-desc">Dias corridos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Datas Históricas</div>
+        <div class="stat-value" id="cri-hist-count">—</div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-toolbar">
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="search-input" id="cri-search" type="text" placeholder="Buscar código, devedor ou emissor…" />
+        </div>
+        <select class="filter-select" id="cri-index-filter">
+          <option value="">Todos os índices</option>
+        </select>
+        <span class="record-count" id="cri-count-label"></span>
+      </div>
+
+      <div class="table-scroll">
+        <table class="data-table" id="cri-table">
+          <thead>
+            <tr>
+              <th data-col="codigo">Código</th>
+              <th data-col="riscoCredito">Risco de Crédito</th>
+              <th data-col="emissor">Emissor</th>
+              <th data-col="vencimento">Vencimento</th>
+              <th data-col="indice">Índice / Correção</th>
+              <th data-col="taxaCompra" class="num">Taxa Compra</th>
+              <th data-col="taxaVenda" class="num">Taxa Venda</th>
+              <th data-col="taxaIndicativa" class="num">Taxa Indicativa</th>
+              <th data-col="desvioPadrao" class="num">Desvio Padrão</th>
+              <th data-col="pu" class="num">PU</th>
+              <th data-col="puPar" class="num">% PU Par</th>
+              <th data-col="duration" class="num">Duration</th>
+            </tr>
+          </thead>
+          <tbody id="cri-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ═══════════════════════════ MODAL ════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div>
+        <span class="modal-code" id="modal-code"></span>
+        <div class="modal-name" id="modal-name"></div>
+        <div class="modal-meta" id="modal-meta"></div>
+      </div>
+      <button class="modal-close" id="modal-close" aria-label="Fechar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="modal-grid" id="modal-grid"></div>
+
+      <div class="chart-section">
+        <div class="chart-section-title">Histórico</div>
+        <div class="charts-row">
+          <div class="chart-box">
+            <div class="chart-label">Taxa Indicativa (%)</div>
+            <div class="chart-no-data" id="chart-taxa-nodata">Histórico insuficiente</div>
+            <canvas id="chart-taxa"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-label">% PU Par</div>
+            <div class="chart-no-data" id="chart-pupar-nodata">Histórico insuficiente</div>
+            <canvas id="chart-pupar"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ TOAST ════════════════════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════ SCRIPTS ══════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
