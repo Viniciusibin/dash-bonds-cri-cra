@@ -321,7 +321,10 @@ def scan_directory(directory, parse_fn, extensions):
             continue
         fpath = os.path.join(directory, fname)
         try:
-            date_str, rows = parse_fn(fpath)
+            _, rows = parse_fn(fpath)
+            # Always use the filename date as the key — it is authoritative and
+            # avoids collisions when the internal reference date is wrong.
+            date_str = _extract_date_from_filename(fpath)
             if date_str and rows:
                 history[date_str] = rows
         except Exception as e:
