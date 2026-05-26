@@ -98,8 +98,7 @@ input, select, button { font-family: inherit; font-size: inherit; }
 
 /* ── Main ────────────────────────────────────── */
 .main {
-  max-width: 1680px;
-  margin: 0 auto;
+  width: 100%;
   padding: 28px 32px 48px;
 }
 
@@ -758,8 +757,7 @@ input[type="file"] { display: none; }
 
 .detail-body {
   padding: 24px 32px 40px;
-  max-width: 1680px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .detail-section,
@@ -807,6 +805,15 @@ input[type="file"] { display: none; }
 
 .detail-body .modal-stat-value {
   word-break: break-word;
+}
+
+/* Hide secondary CVM registration fields in the company details grid. */
+#cvm-company-grid .modal-stat:nth-child(3),
+#cvm-company-grid .modal-stat:nth-child(6),
+#cvm-company-grid .modal-stat:nth-child(7),
+#cvm-company-grid .modal-stat:nth-child(8),
+#cvm-company-grid .modal-stat:nth-child(9) {
+  display: none;
 }
 
 .detail-body .chart-section {

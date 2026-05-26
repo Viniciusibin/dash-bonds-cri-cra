@@ -408,14 +408,9 @@ def get_company_snapshot(identifier, year):
     metrics = load_financial_metrics(year).get(cadastro_row["CNPJ_NUM"], {})
     company = {
         "cd_cvm": cadastro_row.get("CD_CVM"),
-        "cnpj": cadastro_row.get("CNPJ_CIA"),
         "denom_social": cadastro_row.get("DENOM_SOCIAL"),
         "denom_comercial": cadastro_row.get("DENOM_COMERC"),
         "setor_atividade": cadastro_row.get("SETOR_ATIV"),
-        "situacao": cadastro_row.get("SIT"),
-        "situacao_emissor": cadastro_row.get("SIT_EMISSOR"),
-        "controle_acionario": cadastro_row.get("CONTROLE_ACIONARIO"),
-        "categoria_registro": cadastro_row.get("CATEG_REG"),
     }
     return {
         "company": company,
