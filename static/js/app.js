@@ -476,6 +476,9 @@ function renderCvmDetails(data) {
 
   const financialStats = [
     { label: "Ano DFP", value: fin.year || "â€”" },
+    { label: "Data ReferÃªncia", value: fmtDateDisplay(fin.dt_refer) },
+    { label: "Data Entrega CVM", value: fmtDateDisplay(fin.dt_receb) },
+    { label: "VersÃ£o DFP", value: fin.versao || "â€”" },
     { label: "Caixa", value: fmtMoney(fin.cash) },
     { label: "DÃ­vida Curto Prazo", value: fmtMoney(fin.current_debt) },
     { label: "DÃ­vida Longo Prazo", value: fmtMoney(fin.non_current_debt) },
@@ -485,6 +488,7 @@ function renderCvmDetails(data) {
     { label: "Deprec. + Amort.", value: fmtMoney(fin.depreciation_amortization) },
     { label: "EBITDA Proxy", value: fmtMoney(fin.ebitda_proxy), highlight: true },
     { label: "ND / EBITDA", value: fmtMultiple(fin.nd_ebitda), highlight: true },
+    { label: "Documento", value: fin.categoria_doc || "â€”" },
     { label: "Escopo", value: fin.metric_quality?.scope || "â€”" },
   ];
 

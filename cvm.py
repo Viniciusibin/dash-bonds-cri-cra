@@ -1,5 +1,4 @@
 import csv
-import io
 import os
 import unicodedata
 import urllib.request
@@ -98,6 +97,24 @@ def ensure_dfp_zip(year, force=False):
     return path
 
 
+def ensure_dfp_extracted(year, force=False):
+    zip_path = ensure_dfp_zip(year, force=force)
+    extract_dir = os.path.join(CVM_DIR, f"dfp_{year}")
+    if force and os.path.isdir(extract_dir):
+        for root, dirs, files in os.walk(extract_dir, topdown=False):
+            for file_name in files:
+                os.remove(os.path.join(root, file_name))
+            for dir_name in dirs:
+                os.rmdir(os.path.join(root, dir_name))
+        os.rmdir(extract_dir)
+    if force or not os.path.isdir(extract_dir):
+        os.makedirs(extract_dir, exist_ok=True)
+        with zipfile.ZipFile(zip_path) as zf:
+            zf.extractall(extract_dir)
+        load_financial_metrics.cache_clear()
+    return extract_dir
+
+
 @lru_cache(maxsize=1)
 def load_cadastro():
     path = ensure_cadastro_csv(force=False)
@@ -190,11 +207,9 @@ def resolve_company_by_name(name, active_only=True):
     return ranked[0] if score(ranked[0]) > 0 else None
 
 
-def _rows_from_zip(zip_path, member_name):
-    with zipfile.ZipFile(zip_path) as zf:
-        with zf.open(member_name) as fh:
-            wrapper = io.TextIOWrapper(fh, encoding="latin-1", newline="")
-            yield from csv.DictReader(wrapper, delimiter=";")
+def _rows_from_csv(csv_path):
+    with open(csv_path, "r", encoding="latin-1", newline="") as fh:
+        yield from csv.DictReader(fh, delimiter=";")
 
 
 def _pick_best_statement_group(entries):
@@ -325,17 +340,29 @@ def _build_metric_record(cadastro_row, dre_rows, bpa_rows, bpp_rows, dva_rows, y
     }
 
 
+def _load_dfp_metadata(extract_dir, year):
+    path = os.path.join(extract_dir, f"dfp_cia_aberta_{year}.csv")
+    grouped = {}
+    for row in _rows_from_csv(path):
+        key = normalize_cnpj(row.get("CNPJ_CIA"))
+        if not key:
+            continue
+        grouped.setdefault(key, []).append(row)
+    return grouped
+
+
 @lru_cache(maxsize=8)
 def load_financial_metrics(year):
-    zip_path = ensure_dfp_zip(year, force=False)
+    extract_dir = ensure_dfp_extracted(year, force=False)
     cadastro_map = {row["CNPJ_NUM"]: row for row in load_cadastro() if row.get("CNPJ_NUM")}
 
-    dre_rows = _group_rows(_rows_from_zip(zip_path, f"dfp_cia_aberta_DRE_con_{year}.csv"))
-    bpa_rows = _group_rows(_rows_from_zip(zip_path, f"dfp_cia_aberta_BPA_con_{year}.csv"))
-    bpp_rows = _group_rows(_rows_from_zip(zip_path, f"dfp_cia_aberta_BPP_con_{year}.csv"))
-    dva_rows = _group_rows(_rows_from_zip(zip_path, f"dfp_cia_aberta_DVA_con_{year}.csv"))
+    dre_rows = _group_rows(_rows_from_csv(os.path.join(extract_dir, f"dfp_cia_aberta_DRE_con_{year}.csv")))
+    bpa_rows = _group_rows(_rows_from_csv(os.path.join(extract_dir, f"dfp_cia_aberta_BPA_con_{year}.csv")))
+    bpp_rows = _group_rows(_rows_from_csv(os.path.join(extract_dir, f"dfp_cia_aberta_BPP_con_{year}.csv")))
+    dva_rows = _group_rows(_rows_from_csv(os.path.join(extract_dir, f"dfp_cia_aberta_DVA_con_{year}.csv")))
+    meta_rows = _load_dfp_metadata(extract_dir, year)
 
-    cnpjs = set(dre_rows) | set(bpa_rows) | set(bpp_rows) | set(dva_rows)
+    cnpjs = set(dre_rows) | set(bpa_rows) | set(bpp_rows) | set(dva_rows) | set(meta_rows)
     records = {}
     for cnpj_num in cnpjs:
         cadastro_row = cadastro_map.get(cnpj_num)
@@ -347,6 +374,21 @@ def load_financial_metrics(year):
             dva_rows.get(cnpj_num, []),
             year,
         )
+        meta = meta_rows.get(cnpj_num, [])
+        if meta:
+            latest_meta = sorted(
+                meta,
+                key=lambda item: (
+                    item.get("DT_RECEB") or "",
+                    item.get("VERSAO") or "",
+                ),
+                reverse=True,
+            )[0]
+            record["dt_refer"] = latest_meta.get("DT_REFER")
+            record["dt_receb"] = latest_meta.get("DT_RECEB")
+            record["versao"] = latest_meta.get("VERSAO")
+            record["categoria_doc"] = latest_meta.get("CATEG_DOC")
+            record["id_doc"] = latest_meta.get("ID_DOC")
         records[cnpj_num] = record
     return records
 

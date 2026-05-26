@@ -8,6 +8,7 @@ from parser import (
 )
 from cvm import (
     ensure_cadastro_csv,
+    ensure_dfp_extracted,
     ensure_dfp_zip,
     get_company_snapshot,
     resolve_company_by_name,
@@ -208,9 +209,11 @@ def cvm_refresh():
     force = bool(payload.get("force", False))
     ensure_cadastro_csv(force=force)
     ensure_dfp_zip(year, force=force)
+    extract_dir = ensure_dfp_extracted(year, force=force)
     return jsonify({
         "cadastro": "ok",
         "dfp_year": year,
+        "dfp_extract_dir": extract_dir,
         "force": force,
     })
 
