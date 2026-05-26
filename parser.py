@@ -18,6 +18,20 @@ except ImportError:
 NULL_VALUES = {"--", "N/D", "n/d", "nd", "", None}
 DATA_START_ROW = 9   # Row index where debenture data begins (0-based)
 HEADER_ROW = 7       # Row index of column headers
+PT_BR_MONTHS = {
+    "jan": "01",
+    "fev": "02",
+    "mar": "03",
+    "abr": "04",
+    "mai": "05",
+    "jun": "06",
+    "jul": "07",
+    "ago": "08",
+    "set": "09",
+    "out": "10",
+    "nov": "11",
+    "dez": "12",
+}
 
 
 def _is_null(val):
@@ -59,9 +73,11 @@ def _xlrd_date(wb, val):
 
 
 def _extract_date_from_filename(filename):
-    """Extract YYYY-MM-DD from filenames like debenture-15-05.xls."""
+    """Extract YYYY-MM-DD from supported debenture filename patterns."""
     name = os.path.basename(filename)
-    m = re.search(r"(\d{1,2})[-_](\d{2})(?:[-_](\d{2,4}))?", name)
+    stem = os.path.splitext(name)[0].lower()
+
+    m = re.search(r"(\d{1,2})[-_](\d{2})(?:[-_](\d{2,4}))?", stem)
     if m:
         day = m.group(1).zfill(2)
         month = m.group(2).zfill(2)
@@ -71,6 +87,13 @@ def _extract_date_from_filename(filename):
         else:
             year = str(datetime.now().year)
         return f"{year}-{month}-{day}"
+
+    m = re.search(r"^d(?P<year>\d{2})(?P<month>[a-z]{3})(?P<day>\d{2})$", stem)
+    if m:
+        month = PT_BR_MONTHS.get(m.group("month"))
+        if month:
+            return f"20{m.group('year')}-{month}-{m.group('day')}"
+
     return None
 
 
@@ -321,10 +344,10 @@ def scan_directory(directory, parse_fn, extensions):
             continue
         fpath = os.path.join(directory, fname)
         try:
-            _, rows = parse_fn(fpath)
-            # Always use the filename date as the key — it is authoritative and
-            # avoids collisions when the internal reference date is wrong.
-            date_str = _extract_date_from_filename(fpath)
+            internal_date, rows = parse_fn(fpath)
+            # Prefer the filename date when available, but keep the workbook date
+            # as a fallback for newer naming conventions or ad-hoc uploads.
+            date_str = _extract_date_from_filename(fpath) or internal_date
             if date_str and rows:
                 history[date_str] = rows
         except Exception as e:

@@ -6,6 +6,12 @@ from parser import (
     parse_cricra_csv,
     scan_directory,
 )
+from cvm import (
+    ensure_cadastro_csv,
+    ensure_dfp_zip,
+    get_company_snapshot,
+    search_companies,
+)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEB_DIR = os.path.join(BASE_DIR, "debentures")
@@ -160,6 +166,38 @@ def cri_upload():
 
 
 # ─── bootstrap ─────────────────────────────────────────────────────────────
+
+@app.route("/api/cvm/companies")
+def cvm_companies():
+    query = request.args.get("q", "").strip()
+    active_only = request.args.get("active_only", "").lower() in {"1", "true", "yes"}
+    limit = request.args.get("limit", default=25, type=int)
+    limit = min(max(limit, 1), 100)
+    return jsonify(search_companies(query=query, limit=limit, active_only=active_only))
+
+
+@app.route("/api/cvm/company/<identifier>")
+def cvm_company(identifier):
+    year = request.args.get("year", default=2025, type=int)
+    snapshot = get_company_snapshot(identifier, year)
+    if snapshot is None:
+        return jsonify({"error": "Companhia não encontrada"}), 404
+    return jsonify(snapshot)
+
+
+@app.route("/api/cvm/refresh", methods=["POST"])
+def cvm_refresh():
+    payload = request.get_json(silent=True) or {}
+    year = int(payload.get("year", 2025))
+    force = bool(payload.get("force", False))
+    ensure_cadastro_csv(force=force)
+    ensure_dfp_zip(year, force=force)
+    return jsonify({
+        "cadastro": "ok",
+        "dfp_year": year,
+        "force": force,
+    })
+
 
 def load_existing_files():
     print("Carregando arquivos existentes...")
