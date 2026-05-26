@@ -10,6 +10,7 @@ from cvm import (
     ensure_cadastro_csv,
     ensure_dfp_zip,
     get_company_snapshot,
+    resolve_company_by_name,
     search_companies,
 )
 
@@ -182,6 +183,21 @@ def cvm_company(identifier):
     snapshot = get_company_snapshot(identifier, year)
     if snapshot is None:
         return jsonify({"error": "Companhia não encontrada"}), 404
+    return jsonify(snapshot)
+
+
+@app.route("/api/cvm/resolve")
+def cvm_resolve():
+    name = request.args.get("name", "").strip()
+    year = request.args.get("year", default=2025, type=int)
+    if not name:
+        return jsonify({"error": "Nome do emissor não informado"}), 400
+    company = resolve_company_by_name(name)
+    if company is None:
+        return jsonify({"error": "Companhia não encontrada"}), 404
+    snapshot = get_company_snapshot(company["cnpj"], year)
+    if snapshot is None:
+        return jsonify({"company": company, "financials": {}})
     return jsonify(snapshot)
 
 

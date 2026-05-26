@@ -34,6 +34,34 @@ def _normalize_text(value):
     return text.casefold()
 
 
+def _clean_company_name(value):
+    text = _normalize_text(value)
+    replacements = {
+        "(*)": " ",
+        "(**)": " ",
+        "*": " ",
+        "/": " ",
+        "-": " ",
+        ".": " ",
+        ",": " ",
+        " s a ": " sa ",
+    }
+    text = f" {text} "
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return " ".join(text.split())
+
+
+def _tokenize_company_name(value):
+    stopwords = {
+        "sa", "sa.", "s", "a", "de", "do", "da", "dos", "das", "e",
+        "cia", "companhia", "participacoes", "participacao", "investimentos",
+        "holding", "grupo", "spe",
+    }
+    tokens = [token for token in _clean_company_name(value).split() if token not in stopwords]
+    return tokens
+
+
 def _to_float(value):
     if value in (None, ""):
         return None
@@ -111,6 +139,55 @@ def search_companies(query="", limit=25, active_only=False):
         if len(results) >= limit:
             break
     return results
+
+
+def resolve_company_by_name(name, active_only=True):
+    cleaned = _clean_company_name(name)
+    query_tokens = _tokenize_company_name(cleaned)
+    search_terms = [
+        cleaned,
+        " ".join(query_tokens[:3]).strip(),
+        query_tokens[0] if query_tokens else "",
+    ]
+
+    candidates = []
+    seen = set()
+    for term in search_terms:
+        if not term:
+            continue
+        for candidate in search_companies(query=term, limit=20, active_only=active_only):
+            key = (candidate.get("cnpj"), candidate.get("cd_cvm"))
+            if key in seen:
+                continue
+            seen.add(key)
+            candidates.append(candidate)
+
+    if not candidates and active_only:
+        candidates = search_companies(query=name, limit=10, active_only=False)
+    if not candidates:
+        return None
+
+    def score(candidate):
+        haystacks = [
+            _clean_company_name(candidate.get("denom_social")),
+            _clean_company_name(candidate.get("denom_comercial")),
+        ]
+        token_hits = 0
+        for token in query_tokens:
+            if any(token in hay for hay in haystacks):
+                token_hits += 1
+
+        exact_bonus = 0
+        if any(cleaned == hay for hay in haystacks):
+            exact_bonus += 100
+        if any(cleaned in hay for hay in haystacks):
+            exact_bonus += 30
+
+        active_bonus = 15 if candidate.get("situacao") == "ATIVO" else 0
+        return exact_bonus + token_hits * 10 + active_bonus
+
+    ranked = sorted(candidates, key=score, reverse=True)
+    return ranked[0] if score(ranked[0]) > 0 else None
 
 
 def _rows_from_zip(zip_path, member_name):

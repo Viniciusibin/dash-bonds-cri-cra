@@ -16,6 +16,7 @@ const state = {
 };
 
 let charts = { taxa: null, pupar: null };
+let activeDetailRequest = 0;
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
@@ -348,6 +349,7 @@ function setupModal() {
 async function openModal(type, row) {
   const overlay = document.getElementById("modal-overlay");
   const isCri = type === "cri";
+  const requestId = ++activeDetailRequest;
 
   // Header
   document.getElementById("modal-code").textContent = row.codigo;
@@ -389,6 +391,8 @@ async function openModal(type, row) {
     </div>`
   ).join("");
 
+  setCvmLoadingState(isCri ? row.emissor : row.nome);
+
   overlay.classList.add("open");
   document.body.style.overflow = "hidden";
 
@@ -404,12 +408,106 @@ async function openModal(type, row) {
   } catch {
     renderCharts([]);
   }
+
+  const companyQuery = isCri ? row.emissor : row.nome;
+  if (companyQuery) {
+    await loadCvmDetails(companyQuery, requestId);
+  } else {
+    setCvmEmptyState("Sem nome de emissor disponÃ­vel para consulta na CVM.");
+  }
 }
 
 function closeModal() {
   document.getElementById("modal-overlay").classList.remove("open");
   document.body.style.overflow = "";
   destroyCharts();
+}
+
+async function loadCvmDetails(name, requestId) {
+  try {
+    const res = await fetch(`/api/cvm/resolve?name=${encodeURIComponent(name)}&year=2025`);
+    const data = await res.json();
+    if (requestId !== activeDetailRequest) return;
+    if (!res.ok) {
+      setCvmEmptyState(data.error || "NÃ£o foi possÃ­vel localizar a companhia na CVM.");
+      return;
+    }
+    renderCvmDetails(data);
+  } catch {
+    if (requestId !== activeDetailRequest) return;
+    setCvmEmptyState("Erro ao consultar a base da CVM.");
+  }
+}
+
+function setCvmLoadingState(name) {
+  setText("cvm-status", name ? `Consultando CVM para: ${name}` : "Consultando CVM...");
+  document.getElementById("cvm-company-grid").innerHTML = buildPlaceholderStats(5);
+  document.getElementById("cvm-financial-grid").innerHTML = buildPlaceholderStats(6);
+}
+
+function setCvmEmptyState(message) {
+  setText("cvm-status", message);
+  document.getElementById("cvm-company-grid").innerHTML = "";
+  document.getElementById("cvm-financial-grid").innerHTML = "";
+}
+
+function renderCvmDetails(data) {
+  const company = data.company || {};
+  const fin = data.financials || {};
+
+  setText(
+    "cvm-status",
+    company.denom_social
+      ? `Companhia encontrada na CVM: ${company.denom_social}`
+      : "Companhia localizada sem detalhes adicionais."
+  );
+
+  const companyStats = [
+    { label: "RazÃ£o Social", value: company.denom_social || "â€”" },
+    { label: "Nome Comercial", value: company.denom_comercial || "â€”" },
+    { label: "CNPJ", value: company.cnpj || "â€”" },
+    { label: "CÃ³digo CVM", value: company.cd_cvm || "â€”" },
+    { label: "Setor", value: company.setor_atividade || "â€”" },
+    { label: "SituaÃ§Ã£o", value: company.situacao || "â€”" },
+    { label: "SituaÃ§Ã£o Emissor", value: company.situacao_emissor || "â€”" },
+    { label: "Controle", value: company.controle_acionario || "â€”" },
+    { label: "Categoria Registro", value: company.categoria_registro || "â€”" },
+  ];
+
+  const financialStats = [
+    { label: "Ano DFP", value: fin.year || "â€”" },
+    { label: "Caixa", value: fmtMoney(fin.cash) },
+    { label: "DÃ­vida Curto Prazo", value: fmtMoney(fin.current_debt) },
+    { label: "DÃ­vida Longo Prazo", value: fmtMoney(fin.non_current_debt) },
+    { label: "DÃ­vida Bruta", value: fmtMoney(fin.gross_debt), highlight: true },
+    { label: "DÃ­vida LÃ­quida", value: fmtMoney(fin.net_debt), highlight: true },
+    { label: "EBIT", value: fmtMoney(fin.ebit) },
+    { label: "Deprec. + Amort.", value: fmtMoney(fin.depreciation_amortization) },
+    { label: "EBITDA Proxy", value: fmtMoney(fin.ebitda_proxy), highlight: true },
+    { label: "ND / EBITDA", value: fmtMultiple(fin.nd_ebitda), highlight: true },
+    { label: "Escopo", value: fin.metric_quality?.scope || "â€”" },
+  ];
+
+  document.getElementById("cvm-company-grid").innerHTML = renderStatsGrid(companyStats);
+  document.getElementById("cvm-financial-grid").innerHTML = renderStatsGrid(financialStats);
+}
+
+function renderStatsGrid(stats) {
+  return stats.map(s =>
+    `<div class="modal-stat">
+      <div class="modal-stat-label">${esc(s.label)}</div>
+      <div class="modal-stat-value${s.highlight ? " highlight" : ""}">${esc(s.value)}</div>
+    </div>`
+  ).join("");
+}
+
+function buildPlaceholderStats(count) {
+  return Array.from({ length: count }, () => `
+    <div class="modal-stat">
+      <div class="modal-stat-label">Carregando</div>
+      <div class="modal-stat-value">...</div>
+    </div>
+  `).join("");
 }
 
 function destroyCharts() {
@@ -529,6 +627,22 @@ function fmtPU(val, plain = false) {
 function fmtDur(val, plain = false) {
   if (val === null || val === undefined) return plain ? "—" : nullCell();
   return val.toFixed(2);
+}
+
+function fmtMoney(val) {
+  if (val === null || val === undefined) return "â€”";
+  return "R$ " + Number(val).toLocaleString("pt-BR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+
+function fmtMultiple(val) {
+  if (val === null || val === undefined) return "â€”";
+  return Number(val).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }) + "x";
 }
 
 function fmtDateDisplay(key) {
