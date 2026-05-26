@@ -413,7 +413,7 @@ async function openModal(type, row) {
   if (companyQuery) {
     await loadCvmDetails(companyQuery, requestId);
   } else {
-    setCvmEmptyState("Sem nome de emissor disponÃ­vel para consulta na CVM.");
+    setCvmEmptyState("Sem nome de emissor disponível para consulta na CVM.");
   }
 }
 
@@ -463,33 +463,33 @@ function renderCvmDetails(data) {
   );
 
   const companyStats = [
-    { label: "RazÃ£o Social", value: company.denom_social || "â€”" },
-    { label: "Nome Comercial", value: company.denom_comercial || "â€”" },
-    { label: "CNPJ", value: company.cnpj || "â€”" },
-    { label: "CÃ³digo CVM", value: company.cd_cvm || "â€”" },
-    { label: "Setor", value: company.setor_atividade || "â€”" },
-    { label: "SituaÃ§Ã£o", value: company.situacao || "â€”" },
-    { label: "SituaÃ§Ã£o Emissor", value: company.situacao_emissor || "â€”" },
-    { label: "Controle", value: company.controle_acionario || "â€”" },
-    { label: "Categoria Registro", value: company.categoria_registro || "â€”" },
+    { label: "Razão Social", value: company.denom_social || "—" },
+    { label: "Nome Comercial", value: company.denom_comercial || "—" },
+    { label: "CNPJ", value: company.cnpj || "—" },
+    { label: "Código CVM", value: company.cd_cvm || "—" },
+    { label: "Setor", value: company.setor_atividade || "—" },
+    { label: "Situação", value: company.situacao || "—" },
+    { label: "Situação Emissor", value: company.situacao_emissor || "—" },
+    { label: "Controle", value: company.controle_acionario || "—" },
+    { label: "Categoria Registro", value: company.categoria_registro || "—" },
   ];
 
   const financialStats = [
-    { label: "Ano DFP", value: fin.year || "â€”" },
-    { label: "Data ReferÃªncia", value: fmtDateDisplay(fin.dt_refer) },
+    { label: "Ano DFP", value: fin.year || "—" },
+    { label: "Data Referência", value: fmtDateDisplay(fin.dt_refer) },
     { label: "Data Entrega CVM", value: fmtDateDisplay(fin.dt_receb) },
-    { label: "VersÃ£o DFP", value: fin.versao || "â€”" },
+    { label: "Versão DFP", value: fin.versao || "—" },
     { label: "Caixa", value: fmtMoney(fin.cash) },
-    { label: "DÃ­vida Curto Prazo", value: fmtMoney(fin.current_debt) },
-    { label: "DÃ­vida Longo Prazo", value: fmtMoney(fin.non_current_debt) },
-    { label: "DÃ­vida Bruta", value: fmtMoney(fin.gross_debt), highlight: true },
-    { label: "DÃ­vida LÃ­quida", value: fmtMoney(fin.net_debt), highlight: true },
+    { label: "Dívida Curto Prazo", value: fmtMoney(fin.current_debt) },
+    { label: "Dívida Longo Prazo", value: fmtMoney(fin.non_current_debt) },
+    { label: "Dívida Bruta", value: fmtMoney(fin.gross_debt), highlight: true },
+    { label: "Dívida Líquida", value: fmtMoney(fin.net_debt), highlight: true },
     { label: "EBIT", value: fmtMoney(fin.ebit) },
     { label: "Deprec. + Amort.", value: fmtMoney(fin.depreciation_amortization) },
     { label: "EBITDA Proxy", value: fmtMoney(fin.ebitda_proxy), highlight: true },
     { label: "ND / EBITDA", value: fmtMultiple(fin.nd_ebitda), highlight: true },
-    { label: "Documento", value: fin.categoria_doc || "â€”" },
-    { label: "Escopo", value: fin.metric_quality?.scope || "â€”" },
+    { label: "Documento", value: fin.categoria_doc || "—" },
+    { label: "Escopo", value: fin.metric_quality?.scope || "—" },
   ];
 
   document.getElementById("cvm-company-grid").innerHTML = renderStatsGrid(companyStats);
@@ -634,7 +634,7 @@ function fmtDur(val, plain = false) {
 }
 
 function fmtMoney(val) {
-  if (val === null || val === undefined) return "â€”";
+  if (val === null || val === undefined) return "—";
   return "R$ " + Number(val).toLocaleString("pt-BR", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
@@ -642,7 +642,7 @@ function fmtMoney(val) {
 }
 
 function fmtMultiple(val) {
-  if (val === null || val === undefined) return "â€”";
+  if (val === null || val === undefined) return "—";
   return Number(val).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
