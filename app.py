@@ -10,6 +10,7 @@ from cvm import (
     ensure_cadastro_csv,
     ensure_dfp_extracted,
     ensure_dfp_zip,
+    get_company_financial_history,
     get_company_snapshot,
     resolve_company_by_name,
     search_companies,
@@ -200,6 +201,16 @@ def cvm_resolve():
     if snapshot is None:
         return jsonify({"company": company, "financials": {}})
     return jsonify(snapshot)
+
+
+@app.route("/api/cvm/history/<identifier>")
+def cvm_history(identifier):
+    year_end = request.args.get("year_end", default=2025, type=int)
+    years = request.args.get("years", default=5, type=int)
+    history = get_company_financial_history(identifier, year_end=year_end, years=years)
+    if history is None:
+        return jsonify({"error": "Companhia não encontrada"}), 404
+    return jsonify(history)
 
 
 @app.route("/api/cvm/refresh", methods=["POST"])

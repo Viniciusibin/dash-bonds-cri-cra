@@ -15,7 +15,14 @@ const state = {
   },
 };
 
-let charts = { taxa: null, pupar: null };
+let charts = {
+  taxa: null,
+  pupar: null,
+  cvmDebt: null,
+  cvmLeverage: null,
+  cvmCoverage: null,
+  cvmEarnings: null,
+};
 let activeDetailRequest = 0;
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
@@ -433,6 +440,7 @@ async function loadCvmDetails(name, requestId) {
       return;
     }
     renderCvmDetails(data);
+    await loadCvmHistory(data.company || {}, requestId);
   } catch {
     if (requestId !== activeDetailRequest) return;
     setCvmEmptyState("Erro ao consultar a base da CVM.");
@@ -443,12 +451,14 @@ function setCvmLoadingState(name) {
   setText("cvm-status", name ? `Consultando CVM para: ${name}` : "Consultando CVM...");
   document.getElementById("cvm-company-grid").innerHTML = buildPlaceholderStats(5);
   document.getElementById("cvm-financial-grid").innerHTML = buildPlaceholderStats(6);
+  renderCvmHistoryCharts([]);
 }
 
 function setCvmEmptyState(message) {
   setText("cvm-status", message);
   document.getElementById("cvm-company-grid").innerHTML = "";
   document.getElementById("cvm-financial-grid").innerHTML = "";
+  renderCvmHistoryCharts([]);
 }
 
 function renderCvmDetails(data) {
@@ -515,8 +525,90 @@ function buildPlaceholderStats(count) {
 }
 
 function destroyCharts() {
-  if (charts.taxa)  { charts.taxa.destroy();  charts.taxa  = null; }
-  if (charts.pupar) { charts.pupar.destroy(); charts.pupar = null; }
+  Object.keys(charts).forEach(key => {
+    if (charts[key]) {
+      charts[key].destroy();
+      charts[key] = null;
+    }
+  });
+}
+
+async function loadCvmHistory(company, requestId) {
+  const identifier = company.cd_cvm;
+  if (!identifier) {
+    renderCvmHistoryCharts([]);
+    return;
+  }
+  try {
+    const res = await fetch(`/api/cvm/history/${encodeURIComponent(identifier)}?year_end=2025&years=5`);
+    const data = await res.json();
+    if (requestId !== activeDetailRequest) return;
+    if (!res.ok) {
+      renderCvmHistoryCharts([]);
+      return;
+    }
+    renderCvmHistoryCharts(data.history || []);
+  } catch {
+    if (requestId !== activeDetailRequest) return;
+    renderCvmHistoryCharts([]);
+  }
+}
+
+function renderCvmHistoryCharts(history) {
+  toggleChartVisibility("chart-cvm-debt", "chart-cvm-debt-nodata", false);
+  toggleChartVisibility("chart-cvm-leverage", "chart-cvm-leverage-nodata", false);
+  toggleChartVisibility("chart-cvm-coverage", "chart-cvm-coverage-nodata", false);
+  toggleChartVisibility("chart-cvm-earnings", "chart-cvm-earnings-nodata", false);
+
+  if (!history.length || history.length < 2) return;
+
+  const labels = history.map(item => String(item.year || ""));
+  const grossDebt = history.map(item => item.gross_debt);
+  const netDebt = history.map(item => item.net_debt);
+  const cash = history.map(item => item.cash);
+  const ndEbitda = history.map(item => item.nd_ebitda);
+  const shortTermCoverage = history.map(item => item.cash_short_term_debt_coverage);
+  const debtToEquity = history.map(item => item.debt_to_equity);
+  const ebitCoverage = history.map(item => item.ebit_interest_coverage);
+  const ebitdaCoverage = history.map(item => item.ebitda_interest_coverage);
+  const revenue = history.map(item => item.revenue);
+  const ebitda = history.map(item => item.ebitda_proxy);
+  const netIncome = history.map(item => item.net_income);
+
+  if (hasValidSeries(grossDebt, netDebt, cash)) {
+    toggleChartVisibility("chart-cvm-debt", "chart-cvm-debt-nodata", true);
+    charts.cvmDebt = buildFinancialLineChart("chart-cvm-debt", labels, [
+      { label: "Dívida Bruta", data: grossDebt, color: "#A16207" },
+      { label: "Dívida Líquida", data: netDebt, color: "#B91C1C" },
+      { label: "Caixa", data: cash, color: "#0F766E" },
+    ], "money");
+  }
+
+  if (hasValidSeries(ndEbitda, shortTermCoverage, debtToEquity)) {
+    toggleChartVisibility("chart-cvm-leverage", "chart-cvm-leverage-nodata", true);
+    charts.cvmLeverage = buildFinancialLineChart("chart-cvm-leverage", labels, [
+      { label: "ND / EBITDA", data: ndEbitda, color: "#1D4ED8" },
+      { label: "Caixa / Dívida CP", data: shortTermCoverage, color: "#7C3AED" },
+      { label: "Dívida Bruta / Patrimônio", data: debtToEquity, color: "#DC2626" },
+    ], "multiple");
+  }
+
+  if (hasValidSeries(ebitCoverage, ebitdaCoverage)) {
+    toggleChartVisibility("chart-cvm-coverage", "chart-cvm-coverage-nodata", true);
+    charts.cvmCoverage = buildFinancialLineChart("chart-cvm-coverage", labels, [
+      { label: "EBIT / Despesa Financeira", data: ebitCoverage, color: "#2563EB" },
+      { label: "EBITDA / Despesa Financeira", data: ebitdaCoverage, color: "#059669" },
+    ], "multiple");
+  }
+
+  if (hasValidSeries(revenue, ebitda, netIncome)) {
+    toggleChartVisibility("chart-cvm-earnings", "chart-cvm-earnings-nodata", true);
+    charts.cvmEarnings = buildFinancialLineChart("chart-cvm-earnings", labels, [
+      { label: "Receita Líquida", data: revenue, color: "#475569" },
+      { label: "EBITDA Proxy", data: ebitda, color: "#D97706" },
+      { label: "Lucro Líquido", data: netIncome, color: "#16A34A" },
+    ], "money");
+  }
 }
 
 function renderCharts(hist) {
@@ -604,6 +696,89 @@ function buildLineChart(canvasId, labels, data, label, color) {
       },
     },
   });
+}
+
+function buildFinancialLineChart(canvasId, labels, datasets, valueMode) {
+  const ctx = document.getElementById(canvasId).getContext("2d");
+  return new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: datasets.map(series => ({
+        label: series.label,
+        data: series.data,
+        borderColor: series.color,
+        backgroundColor: series.color + "18",
+        borderWidth: 2,
+        pointRadius: labels.length > 8 ? 2 : 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: series.color,
+        fill: false,
+        tension: 0.28,
+        spanGaps: true,
+      })),
+    },
+    options: {
+      responsive: true,
+      animation: { duration: 300 },
+      plugins: {
+        legend: { display: true, position: "bottom" },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${formatSeriesValue(ctx.raw, valueMode)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 10 }, maxTicksLimit: 6, color: "#9CA3AF" },
+        },
+        y: {
+          grid: { color: "#F3F4F6" },
+          ticks: {
+            font: { size: 10 },
+            color: "#9CA3AF",
+            callback: value => formatAxisValue(value, valueMode),
+          },
+        },
+      },
+    },
+  });
+}
+
+function toggleChartVisibility(canvasId, noDataId, showChart) {
+  const noData = document.getElementById(noDataId);
+  const canvas = document.getElementById(canvasId);
+  if (!noData || !canvas) return;
+  noData.style.display = showChart ? "none" : "flex";
+  canvas.style.display = showChart ? "block" : "none";
+}
+
+function hasValidSeries(...seriesList) {
+  return seriesList.some(series => Array.isArray(series) && series.some(v => v !== null && v !== undefined));
+}
+
+function formatCompactMoney(value) {
+  if (value === null || value === undefined) return "—";
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)} bi`;
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} mi`;
+  if (abs >= 1_000) return `${(value / 1_000).toFixed(1)} mil`;
+  return Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+}
+
+function formatSeriesValue(value, mode) {
+  if (value === null || value === undefined) return "—";
+  if (mode === "money") return "R$ " + Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+  if (mode === "multiple") return Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "x";
+  return Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+}
+
+function formatAxisValue(value, mode) {
+  if (mode === "money") return formatCompactMoney(value);
+  if (mode === "multiple") return Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "x";
+  return value;
 }
 
 // ── Formatting helpers ────────────────────────────────────────────────────────

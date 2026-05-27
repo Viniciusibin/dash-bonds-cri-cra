@@ -1,4 +1,5 @@
 import csv
+import datetime as dt
 import os
 import unicodedata
 import urllib.request
@@ -298,6 +299,31 @@ def _build_metric_record(cadastro_row, dre_rows, bpa_rows, bpp_rows, dva_rows, y
         dva_scope,
         description_terms=["depreciacao", "amortizacao", "exaustao"],
     )
+    revenue = _find_account_value(
+        dre_scope,
+        code_prefixes=["3.01"],
+        description_terms=["receita", "liquida"],
+    )
+    net_income = _find_account_value(
+        dre_scope,
+        code_prefixes=["3.11"],
+        description_terms=["lucro", "prejuizo", "periodo"],
+    )
+    financial_result = _find_account_value(
+        dre_scope,
+        code_prefixes=["3.06.02"],
+        description_terms=["resultado", "financeiro"],
+    )
+    financial_expense = _find_account_value(
+        dre_scope,
+        description_terms=["despesas", "financeiras"],
+    )
+    equity = _find_account_value(
+        bpp_scope,
+        code_prefixes=["2.03"],
+        description_terms=["patrimonio", "liquido"],
+        fixed_only=False,
+    )
 
     gross_debt = None
     if current_debt is not None or non_current_debt is not None:
@@ -315,6 +341,34 @@ def _build_metric_record(cadastro_row, dre_rows, bpa_rows, bpp_rows, dva_rows, y
     if net_debt is not None and ebitda not in (None, 0):
         nd_ebitda = net_debt / ebitda
 
+    current_debt_ratio = None
+    if gross_debt not in (None, 0) and current_debt is not None:
+        current_debt_ratio = current_debt / gross_debt
+
+    cash_short_term_debt_coverage = None
+    if current_debt not in (None, 0) and cash is not None:
+        cash_short_term_debt_coverage = cash / current_debt
+
+    debt_to_equity = None
+    if gross_debt is not None and equity not in (None, 0):
+        debt_to_equity = gross_debt / equity
+
+    ebit_interest_coverage = None
+    if ebit is not None and financial_expense not in (None, 0):
+        ebit_interest_coverage = ebit / financial_expense
+
+    ebitda_interest_coverage = None
+    if ebitda is not None and financial_expense not in (None, 0):
+        ebitda_interest_coverage = ebitda / financial_expense
+
+    ebit_margin = None
+    if ebit is not None and revenue not in (None, 0):
+        ebit_margin = ebit / revenue
+
+    ebitda_margin = None
+    if ebitda is not None and revenue not in (None, 0):
+        ebitda_margin = ebitda / revenue
+
     return {
         "year": year,
         "cd_cvm": cadastro_row.get("CD_CVM") if cadastro_row else None,
@@ -327,10 +381,22 @@ def _build_metric_record(cadastro_row, dre_rows, bpa_rows, bpp_rows, dva_rows, y
         "non_current_debt": non_current_debt,
         "gross_debt": gross_debt,
         "net_debt": net_debt,
+        "revenue": revenue,
         "ebit": ebit,
         "depreciation_amortization": da,
         "ebitda_proxy": ebitda,
+        "net_income": net_income,
+        "financial_result": financial_result,
+        "financial_expense": financial_expense,
+        "equity": equity,
         "nd_ebitda": nd_ebitda,
+        "current_debt_ratio": current_debt_ratio,
+        "cash_short_term_debt_coverage": cash_short_term_debt_coverage,
+        "debt_to_equity": debt_to_equity,
+        "ebit_interest_coverage": ebit_interest_coverage,
+        "ebitda_interest_coverage": ebitda_interest_coverage,
+        "ebit_margin": ebit_margin,
+        "ebitda_margin": ebitda_margin,
         "metric_quality": {
             "scope": "consolidated_preferred",
             "ebitda_proxy": da is not None,
@@ -415,4 +481,43 @@ def get_company_snapshot(identifier, year):
     return {
         "company": company,
         "financials": metrics,
+    }
+
+
+def get_company_financial_history(identifier, year_end=None, years=5):
+    identifier_norm = normalize_cnpj(identifier) or str(identifier).strip()
+
+    cadastro_row = None
+    for row in load_cadastro():
+        if normalize_cnpj(row.get("CNPJ_CIA")) == identifier_norm or row.get("CD_CVM") == identifier_norm:
+            cadastro_row = row
+            break
+
+    if cadastro_row is None:
+        return None
+
+    if year_end is None:
+        year_end = dt.date.today().year - 1
+    years = max(1, min(int(years), 10))
+    year_start = year_end - years + 1
+
+    history = []
+    for year in range(year_start, year_end + 1):
+        try:
+            metrics = load_financial_metrics(year).get(cadastro_row["CNPJ_NUM"])
+        except Exception:
+            metrics = None
+        if not metrics:
+            continue
+        history.append(metrics)
+
+    company = {
+        "cd_cvm": cadastro_row.get("CD_CVM"),
+        "denom_social": cadastro_row.get("DENOM_SOCIAL"),
+        "denom_comercial": cadastro_row.get("DENOM_COMERC"),
+        "setor_atividade": cadastro_row.get("SETOR_ATIV"),
+    }
+    return {
+        "company": company,
+        "history": history,
     }

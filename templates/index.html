@@ -77,7 +77,6 @@
     </div>
 
     <!-- Toolbar + Table -->
-    <div class="table-card">
       <div class="table-toolbar">
         <div class="search-wrap">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -108,7 +107,6 @@
           <tbody id="deb-tbody"></tbody>
         </table>
       </div>
-    </div>
   </section>
 
   <!-- ─────────────── CRI/CRA TAB ─────────────── -->
@@ -156,7 +154,6 @@
       </div>
     </div>
 
-    <div class="table-card">
       <div class="table-toolbar">
         <div class="search-wrap">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -189,7 +186,6 @@
           <tbody id="cri-tbody"></tbody>
         </table>
       </div>
-    </div>
   </section>
 </main>
 
@@ -215,7 +211,7 @@
 
       <section class="detail-section">
         <div class="section-kicker">Cadastro CVM</div>
-        <div class="cvm-status" id="cvm-status">Buscando informaÃ§Ãµes da CVM...</div>
+        <div class="cvm-status" id="cvm-status">Buscando informações da CVM...</div>
         <div class="modal-grid cvm-grid" id="cvm-company-grid"></div>
       </section>
 
@@ -236,6 +232,31 @@
             <div class="chart-label">% PU Par</div>
             <div class="chart-no-data" id="chart-pupar-nodata">Histórico insuficiente</div>
             <canvas id="chart-pupar"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="chart-section">
+        <div class="chart-section-title">Histórico Financeiro CVM</div>
+        <div class="charts-row charts-row-financial">
+          <div class="chart-box">
+            <div class="chart-label">Dívida e Caixa (R$)</div>
+            <div class="chart-no-data" id="chart-cvm-debt-nodata">Histórico insuficiente</div>
+            <canvas id="chart-cvm-debt"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-label">Alavancagem e Liquidez</div>
+            <div class="chart-no-data" id="chart-cvm-leverage-nodata">Histórico insuficiente</div>
+            <canvas id="chart-cvm-leverage"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-label">Cobertura de Juros</div>
+            <div class="chart-no-data" id="chart-cvm-coverage-nodata">Histórico insuficiente</div>
+            <canvas id="chart-cvm-coverage"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-label">Resultado Operacional (R$)</div>
+            <div class="chart-no-data" id="chart-cvm-earnings-nodata">Histórico insuficiente</div>
+            <canvas id="chart-cvm-earnings"></canvas>
           </div>
         </div>
       </div>

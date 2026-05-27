@@ -32,15 +32,21 @@
 /* ── Reset ───────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 14px; }
+html {
+  font-size: 14px;
+  height: 100%;
+}
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+  height: 100%;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
 }
 
 input, select, button { font-family: inherit; font-size: inherit; }
@@ -100,6 +106,10 @@ input, select, button { font-family: inherit; font-size: inherit; }
 .main {
   width: 100%;
   padding: 28px 32px 48px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Tab bar ─────────────────────────────────── */
@@ -140,7 +150,12 @@ input, select, button { font-family: inherit; font-size: inherit; }
 
 /* ── Tab content ─────────────────────────────── */
 .tab-content { display: none; }
-.tab-content.active { display: block; }
+.tab-content.active {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
 
 /* ── Section header ──────────────────────────── */
 .section-header {
@@ -262,11 +277,15 @@ input[type="file"] { display: none; }
 
 /* ── Table card ──────────────────────────────── */
 .table-card {
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
 }
 
 /* ── Toolbar ─────────────────────────────────── */
@@ -274,7 +293,7 @@ input[type="file"] { display: none; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
@@ -338,7 +357,9 @@ input[type="file"] { display: none; }
 .table-scroll {
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 620px;
+  flex: 1;
+  min-height: 0;
+  background: transparent;
 }
 
 .table-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -353,7 +374,7 @@ input[type="file"] { display: none; }
 }
 
 .data-table thead {
-  background: #F8FAFC;
+  background: rgba(248,250,252,.96);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -387,7 +408,7 @@ input[type="file"] { display: none; }
 }
 
 .data-table tbody tr:last-child { border-bottom: none; }
-.data-table tbody tr:hover { background: var(--row-hover); }
+.data-table tbody tr:hover { background: rgba(238,242,255,.7); }
 
 .data-table tbody td {
   padding: 9px 12px;
@@ -826,6 +847,12 @@ input[type="file"] { display: none; }
   border-radius: 18px;
 }
 
+.charts-row-financial {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
 @media (max-width: 1200px) {
   .detail-body .modal-grid,
   .detail-body .cvm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -837,6 +864,7 @@ input[type="file"] { display: none; }
   .detail-header .modal-name { font-size: 24px; }
   .detail-body .modal-grid,
   .detail-body .cvm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .charts-row-financial { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {
