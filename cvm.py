@@ -244,7 +244,7 @@ def _group_rows(rows):
     return grouped
 
 
-def _find_account_value(rows, code_prefixes=None, description_terms=None, fixed_only=True):
+def _find_account_value(rows, code_prefixes=None, description_terms=None, fixed_only=True, take_abs=True):
     code_prefixes = code_prefixes or []
     description_terms = description_terms or []
     terms = [_normalize_text(term) for term in description_terms]
@@ -253,13 +253,27 @@ def _find_account_value(rows, code_prefixes=None, description_terms=None, fixed_
             continue
         code = row.get("CD_CONTA", "")
         desc = _normalize_text(row.get("DS_CONTA"))
-        code_match = any(code == prefix or code.startswith(prefix + ".") for prefix in code_prefixes)
-        desc_match = terms and all(term in desc for term in terms)
-        if code_match or desc_match:
-            value = _to_float(row.get("VL_CONTA"))
-            if value is None:
+        code_match = bool(code_prefixes) and any(
+            code == prefix or code.startswith(prefix + ".")
+            for prefix in code_prefixes
+        )
+        desc_match = bool(terms) and all(term in desc for term in terms)
+        if code_prefixes and description_terms:
+            if not (code_match and desc_match):
                 continue
-            return abs(value) * _scale_multiplier(row.get("ESCALA_MOEDA"))
+        elif code_prefixes:
+            if not code_match:
+                continue
+        elif description_terms:
+            if not desc_match:
+                continue
+        else:
+            continue
+        value = _to_float(row.get("VL_CONTA"))
+        if value is None:
+            continue
+        scaled = float(value) * _scale_multiplier(row.get("ESCALA_MOEDA"))
+        return abs(scaled) if take_abs else scaled
     return None
 
 
@@ -271,8 +285,8 @@ def _build_metric_record(cadastro_row, dre_rows, bpa_rows, bpp_rows, dva_rows, y
 
     cash = _find_account_value(
         bpa_scope,
-        code_prefixes=["1.01", "1.01.01"],
-        description_terms=["caixa", "equivalentes", "caixa"],
+        code_prefixes=["1.01.01"],
+        description_terms=["caixa", "equivalentes"],
     )
     current_debt = _find_account_value(
         bpp_scope,
@@ -287,35 +301,34 @@ def _build_metric_record(cadastro_row, dre_rows, bpa_rows, bpp_rows, dva_rows, y
     ebit = _find_account_value(
         dre_scope,
         code_prefixes=["3.05"],
-        description_terms=["resultado antes do resultado financeiro e dos tributos"],
+        description_terms=["resultado", "financeiro", "tributos"],
+        take_abs=False,
     )
-    if ebit is None:
-        ebit = _find_account_value(
-            dre_scope,
-            code_prefixes=["3.05"],
-            description_terms=["resultado antes dos tributos sobre o lucro"],
-        )
+    # D&A structure in DVA varies by company (7.04.01 or 7.05.01); match by description only
     da = _find_account_value(
         dva_scope,
-        description_terms=["depreciacao", "amortizacao", "exaustao"],
+        description_terms=["depreciacao", "amortizacao"],
     )
     revenue = _find_account_value(
         dre_scope,
         code_prefixes=["3.01"],
-        description_terms=["receita", "liquida"],
+        take_abs=False,
     )
     net_income = _find_account_value(
         dre_scope,
-        code_prefixes=["3.11"],
-        description_terms=["lucro", "prejuizo", "periodo"],
+        code_prefixes=["3.11.01"],
+        description_terms=["atribuido", "controladora"],
+        take_abs=False,
     )
     financial_result = _find_account_value(
         dre_scope,
-        code_prefixes=["3.06.02"],
+        code_prefixes=["3.06"],
         description_terms=["resultado", "financeiro"],
+        take_abs=False,
     )
     financial_expense = _find_account_value(
         dre_scope,
+        code_prefixes=["3.06.02"],
         description_terms=["despesas", "financeiras"],
     )
     equity = _find_account_value(
@@ -323,6 +336,7 @@ def _build_metric_record(cadastro_row, dre_rows, bpa_rows, bpp_rows, dva_rows, y
         code_prefixes=["2.03"],
         description_terms=["patrimonio", "liquido"],
         fixed_only=False,
+        take_abs=False,
     )
 
     gross_debt = None
@@ -422,24 +436,44 @@ def load_financial_metrics(year):
     extract_dir = ensure_dfp_extracted(year, force=False)
     cadastro_map = {row["CNPJ_NUM"]: row for row in load_cadastro() if row.get("CNPJ_NUM")}
 
-    dre_rows = _group_rows(_rows_from_csv(os.path.join(extract_dir, f"dfp_cia_aberta_DRE_con_{year}.csv")))
-    bpa_rows = _group_rows(_rows_from_csv(os.path.join(extract_dir, f"dfp_cia_aberta_BPA_con_{year}.csv")))
-    bpp_rows = _group_rows(_rows_from_csv(os.path.join(extract_dir, f"dfp_cia_aberta_BPP_con_{year}.csv")))
-    dva_rows = _group_rows(_rows_from_csv(os.path.join(extract_dir, f"dfp_cia_aberta_DVA_con_{year}.csv")))
+    def _load_grouped(filename):
+        path = os.path.join(extract_dir, filename)
+        if not os.path.exists(path):
+            return {}
+        return _group_rows(_rows_from_csv(path))
+
+    dre_con = _load_grouped(f"dfp_cia_aberta_DRE_con_{year}.csv")
+    bpa_con = _load_grouped(f"dfp_cia_aberta_BPA_con_{year}.csv")
+    bpp_con = _load_grouped(f"dfp_cia_aberta_BPP_con_{year}.csv")
+    dva_con = _load_grouped(f"dfp_cia_aberta_DVA_con_{year}.csv")
+
+    dre_ind = _load_grouped(f"dfp_cia_aberta_DRE_ind_{year}.csv")
+    bpa_ind = _load_grouped(f"dfp_cia_aberta_BPA_ind_{year}.csv")
+    bpp_ind = _load_grouped(f"dfp_cia_aberta_BPP_ind_{year}.csv")
+    dva_ind = _load_grouped(f"dfp_cia_aberta_DVA_ind_{year}.csv")
+
     meta_rows = _load_dfp_metadata(extract_dir, year)
 
-    cnpjs = set(dre_rows) | set(bpa_rows) | set(bpp_rows) | set(dva_rows) | set(meta_rows)
+    cnpjs = (
+        set(dre_con) | set(bpa_con) | set(bpp_con) | set(dva_con) |
+        set(dre_ind) | set(bpa_ind) | set(bpp_ind) | set(dva_ind) |
+        set(meta_rows)
+    )
+
     records = {}
     for cnpj_num in cnpjs:
         cadastro_row = cadastro_map.get(cnpj_num)
-        record = _build_metric_record(
-            cadastro_row,
-            dre_rows.get(cnpj_num, []),
-            bpa_rows.get(cnpj_num, []),
-            bpp_rows.get(cnpj_num, []),
-            dva_rows.get(cnpj_num, []),
-            year,
-        )
+
+        # Prefer consolidated; fall back to individual when consolidated absent
+        has_con = cnpj_num in dre_con
+        dre = dre_con.get(cnpj_num) or dre_ind.get(cnpj_num) or []
+        bpa = bpa_con.get(cnpj_num) or bpa_ind.get(cnpj_num) or []
+        bpp = bpp_con.get(cnpj_num) or bpp_ind.get(cnpj_num) or []
+        dva = dva_con.get(cnpj_num) or dva_ind.get(cnpj_num) or []
+
+        record = _build_metric_record(cadastro_row, dre, bpa, bpp, dva, year)
+        record["metric_quality"]["scope"] = "consolidated" if has_con else "individual"
+
         meta = meta_rows.get(cnpj_num, [])
         if meta:
             latest_meta = sorted(
@@ -473,10 +507,15 @@ def get_company_snapshot(identifier, year):
 
     metrics = load_financial_metrics(year).get(cadastro_row["CNPJ_NUM"], {})
     company = {
-        "cd_cvm": cadastro_row.get("CD_CVM"),
-        "denom_social": cadastro_row.get("DENOM_SOCIAL"),
-        "denom_comercial": cadastro_row.get("DENOM_COMERC"),
-        "setor_atividade": cadastro_row.get("SETOR_ATIV"),
+        "cd_cvm":               cadastro_row.get("CD_CVM"),
+        "cnpj":                 cadastro_row.get("CNPJ_CIA"),
+        "denom_social":         cadastro_row.get("DENOM_SOCIAL"),
+        "denom_comercial":      cadastro_row.get("DENOM_COMERC"),
+        "setor_atividade":      cadastro_row.get("SETOR_ATIV"),
+        "situacao":             cadastro_row.get("SIT"),
+        "situacao_emissor":     cadastro_row.get("SIT_EMISSOR"),
+        "controle_acionario":   cadastro_row.get("CONTROLE_ACIONARIO"),
+        "categoria_registro":   cadastro_row.get("CATEG_REG"),
     }
     return {
         "company": company,

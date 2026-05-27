@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTG Pactual - Detalhe da Debenture</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="detail-page-body">
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">BTG</div>
+    <div>
+      <div class="logo-name">BTG Pactual</div>
+      <div class="logo-sub">Monitor de Renda Fixa</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="header-date" id="headerDate"></span>
+  </div>
+</header>
+
+<main class="detail-page-shell">
+  <section class="detail-page-header">
+    <div class="detail-page-header-top">
+      <a class="detail-back-btn" href="/">← Voltar</a>
+    </div>
+    <div class="detail-page-header-main">
+      <div class="detail-header-topline">
+        <span class="modal-code" id="detail-code"></span>
+        <span class="modal-category" id="detail-category"></span>
+      </div>
+      <div class="modal-name" id="detail-name"></div>
+      <div class="modal-meta" id="detail-meta"></div>
+    </div>
+  </section>
+
+  <nav class="detail-page-tabs" aria-label="Seções">
+    <button class="detail-page-tab active" type="button" data-scroll-target="detail-market">Mercado</button>
+    <button class="detail-page-tab" type="button" data-scroll-target="detail-cvm-company">Cadastro CVM</button>
+    <button class="detail-page-tab" type="button" data-scroll-target="detail-cvm-financial">Financeiro CVM</button>
+    <button class="detail-page-tab" type="button" data-scroll-target="detail-history">Histórico</button>
+  </nav>
+
+  <div class="detail-page-content">
+    <section class="detail-section" id="detail-market">
+      <div class="section-kicker">Mercado Secundário</div>
+      <div class="modal-grid detail-market-grid" id="detail-market-grid"></div>
+    </section>
+
+    <section class="detail-section" id="detail-cvm-company">
+      <div class="section-kicker">Cadastro CVM</div>
+      <div class="cvm-status" id="detail-cvm-status">Buscando informações da CVM...</div>
+      <div class="modal-grid detail-company-grid" id="detail-cvm-company-grid"></div>
+    </section>
+
+    <section class="detail-section" id="detail-cvm-financial">
+      <div class="section-kicker">Financeiro CVM</div>
+      <div class="modal-grid detail-financial-grid" id="detail-cvm-financial-grid"></div>
+    </section>
+
+    <section class="chart-section" id="detail-history">
+      <div class="section-kicker">Histórico</div>
+      <div class="detail-history-grid">
+        <article class="chart-box chart-box-lg">
+          <div class="chart-card-head">
+            <div class="chart-title">Taxa Indicativa</div>
+            <div class="chart-subtitle" id="detail-chart-taxa-subtitle">Últimos pregões</div>
+          </div>
+          <div class="chart-tooltip-host">
+            <canvas id="detail-chart-taxa"></canvas>
+          </div>
+          <div class="chart-no-data" id="detail-chart-taxa-empty">Histórico insuficiente</div>
+          <div class="chart-legend" id="detail-chart-taxa-legend"></div>
+        </article>
+
+        <article class="chart-box chart-box-lg">
+          <div class="chart-card-head">
+            <div class="chart-title">% PU Par</div>
+            <div class="chart-subtitle" id="detail-chart-pupar-subtitle">Últimos pregões</div>
+          </div>
+          <div class="chart-tooltip-host">
+            <canvas id="detail-chart-pupar"></canvas>
+          </div>
+          <div class="chart-no-data" id="detail-chart-pupar-empty">Histórico insuficiente</div>
+          <div class="chart-legend" id="detail-chart-pupar-legend"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="chart-section">
+      <div class="section-kicker">Histórico Financeiro CVM</div>
+      <div class="detail-financial-history-grid">
+        <article class="chart-box chart-box-md">
+          <div class="chart-card-head">
+            <div class="chart-title">Dívida e Caixa</div>
+            <div class="chart-subtitle" id="detail-chart-debt-subtitle">Dados anuais</div>
+          </div>
+          <div class="chart-tooltip-host">
+            <canvas id="detail-chart-debt"></canvas>
+          </div>
+          <div class="chart-no-data" id="detail-chart-debt-empty">Histórico insuficiente</div>
+          <div class="chart-legend" id="detail-chart-debt-legend"></div>
+        </article>
+
+        <article class="chart-box chart-box-md">
+          <div class="chart-card-head">
+            <div class="chart-title">Alavancagem e Liquidez</div>
+            <div class="chart-subtitle" id="detail-chart-leverage-subtitle">Dados anuais</div>
+          </div>
+          <div class="chart-tooltip-host">
+            <canvas id="detail-chart-leverage"></canvas>
+          </div>
+          <div class="chart-no-data" id="detail-chart-leverage-empty">Histórico insuficiente</div>
+          <div class="chart-legend" id="detail-chart-leverage-legend"></div>
+        </article>
+
+        <article class="chart-box chart-box-md">
+          <div class="chart-card-head">
+            <div class="chart-title">Cobertura de Juros</div>
+            <div class="chart-subtitle" id="detail-chart-coverage-subtitle">Dados anuais</div>
+          </div>
+          <div class="chart-tooltip-host">
+            <canvas id="detail-chart-coverage"></canvas>
+          </div>
+          <div class="chart-no-data" id="detail-chart-coverage-empty">Histórico insuficiente</div>
+          <div class="chart-legend" id="detail-chart-coverage-legend"></div>
+        </article>
+
+        <article class="chart-box chart-box-md">
+          <div class="chart-card-head">
+            <div class="chart-title">Resultado Operacional</div>
+            <div class="chart-subtitle" id="detail-chart-earnings-subtitle">Dados anuais</div>
+          </div>
+          <div class="chart-tooltip-host">
+            <canvas id="detail-chart-earnings"></canvas>
+          </div>
+          <div class="chart-no-data" id="detail-chart-earnings-empty">Histórico insuficiente</div>
+          <div class="chart-legend" id="detail-chart-earnings-legend"></div>
+        </article>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  window.__DEBENTURE_DETAIL__ = {
+    codigo: {{ codigo|tojson }},
+    date: {{ date|tojson }},
+    row: {{ row|tojson }}
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="/static/js/debenture-detail.js"></script>
+</body>
+</html>

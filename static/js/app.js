@@ -416,7 +416,7 @@ async function openModal(type, row) {
     renderCharts([]);
   }
 
-  const companyQuery = isCri ? row.emissor : row.nome;
+  const companyQuery = isCri ? row.riscoCredito : row.nome;
   if (companyQuery) {
     await loadCvmDetails(companyQuery, requestId);
   } else {
