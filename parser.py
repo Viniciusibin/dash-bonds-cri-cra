@@ -73,10 +73,16 @@ def _xlrd_date(wb, val):
 
 
 def _extract_date_from_filename(filename):
-    """Extract YYYY-MM-DD from supported debenture filename patterns."""
+    """Extract YYYY-MM-DD from supported filename patterns."""
     name = os.path.basename(filename)
     stem = os.path.splitext(name)[0].lower()
 
+    # YYYY-MM-DD (new format: cri_cra-2026-05-23)
+    m = re.search(r"(\d{4})[_-](\d{2})[_-](\d{2})", stem)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+
+    # DD-MM[-YY[YY]] (old format: cri_cra-07-05, d26jun11 falls through)
     m = re.search(r"(\d{1,2})[-_](\d{2})(?:[-_](\d{2,4}))?", stem)
     if m:
         day = m.group(1).zfill(2)
@@ -345,11 +351,40 @@ def scan_directory(directory, parse_fn, extensions):
         fpath = os.path.join(directory, fname)
         try:
             internal_date, rows = parse_fn(fpath)
-            # Prefer the filename date when available, but keep the workbook date
-            # as a fallback for newer naming conventions or ad-hoc uploads.
             date_str = _extract_date_from_filename(fpath) or internal_date
             if date_str and rows:
                 history[date_str] = rows
         except Exception as e:
             print(f"  Warning: could not parse {fname}: {e}")
     return history
+
+
+def scan_cricra_directory(directory):
+    """Scan CRI/CRA directory grouping rows by their per-row dataRef date.
+
+    Handles multi-date CSV files correctly and deduplicates by codigo so that
+    if the same security appears in multiple source files for the same date,
+    the entry from the latest file (alphabetical order) wins.
+    """
+    # {date: {codigo: row}}
+    by_date: dict = {}
+    if not os.path.isdir(directory):
+        return {}
+    for fname in sorted(os.listdir(directory)):
+        if os.path.splitext(fname)[1].lower() != ".csv":
+            continue
+        fpath = os.path.join(directory, fname)
+        try:
+            _, rows = parse_cricra_csv(fpath)
+            if not rows:
+                continue
+            for row in rows:
+                raw = row.get("dataRef", "")
+                date_str = _parse_date_str(raw) if raw else _extract_date_from_filename(fpath)
+                if not date_str:
+                    continue
+                codigo = row.get("codigo") or ""
+                by_date.setdefault(date_str, {})[codigo] = row
+        except Exception as e:
+            print(f"  Warning: could not parse {fname}: {e}")
+    return {date: list(rows_by_code.values()) for date, rows_by_code in by_date.items()}

@@ -69,6 +69,74 @@ function setupUploads() {
     uploadFiles("/api/cricra/upload", e.target.files, "cri");
     e.target.value = "";
   });
+  document.getElementById("deb-fetch-btn").addEventListener("click", fetchDebANBIMA);
+  document.getElementById("cri-fetch-btn").addEventListener("click", fetchCriANBIMA);
+}
+
+async function fetchCriANBIMA() {
+  const btn = document.getElementById("cri-fetch-btn");
+  const since = document.getElementById("cri-fetch-since").value;
+  btn.disabled = true;
+  btn.textContent = "Baixando…";
+  showToast("Baixando dados da ANBIMA…", "info");
+  try {
+    const body = since ? JSON.stringify({ start_date: since }) : "{}";
+    const res = await fetch("/api/cricra/fetch", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || "Erro ao baixar da ANBIMA", "error");
+    } else if (data.message) {
+      showToast(data.message, "info");
+    } else {
+      const n = data.loaded.length;
+      if (n === 0) {
+        const upTo = data.store_latest ? ` Mais recente: ${fmtDateDisplay(data.store_latest)}` : "";
+        showToast(`Nenhum arquivo novo na ANBIMA.${upTo}`, "info");
+      } else {
+        const total = data.loaded.reduce((s, x) => s + x.count, 0);
+        showToast(`✓ ${n} data${n !== 1 ? "s" : ""} baixada${n !== 1 ? "s" : ""} · ${total.toLocaleString("pt-BR")} títulos`, "success");
+        loadCri(data.latest);
+      }
+    }
+  } catch {
+    showToast("Erro de conexão com o servidor", "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Atualizar ANBIMA';
+  }
+}
+
+async function fetchDebANBIMA() {
+  const btn = document.getElementById("deb-fetch-btn");
+  const since = document.getElementById("deb-fetch-since").value;
+  btn.disabled = true;
+  btn.textContent = "Baixando…";
+  showToast("Baixando dados da ANBIMA…", "info");
+  try {
+    const body = since ? JSON.stringify({ start_date: since }) : "{}";
+    const res = await fetch("/api/debentures/fetch", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || "Erro ao baixar da ANBIMA", "error");
+    } else if (data.message) {
+      showToast(data.message, "info");
+    } else {
+      const n = data.loaded.length;
+      if (n === 0) {
+        const upTo = data.store_latest ? ` Mais recente: ${fmtDateDisplay(data.store_latest)}` : "";
+        showToast(`Nenhum arquivo novo na ANBIMA.${upTo}`, "info");
+      } else {
+        const total = data.loaded.reduce((s, x) => s + x.count, 0);
+        showToast(`✓ ${n} data${n !== 1 ? "s" : ""} baixada${n !== 1 ? "s" : ""} · ${total.toLocaleString("pt-BR")} títulos`, "success");
+        loadDeb(data.latest);
+      }
+    }
+  } catch {
+    showToast("Erro de conexão com o servidor", "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Atualizar ANBIMA';
+  }
 }
 
 async function uploadFiles(url, files, type) {

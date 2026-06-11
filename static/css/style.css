@@ -232,6 +232,18 @@ input[type="file"] { display: none; }
 
 .date-select:focus { border-color: var(--navy); }
 
+.fetch-since {
+  padding: 7px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--surface);
+  outline: none;
+  cursor: pointer;
+}
+.fetch-since:focus { border-color: var(--navy); }
+
 /* ── Stats row ───────────────────────────────── */
 .stats-row {
   display: grid;
