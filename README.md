@@ -1,5 +1,23 @@
 # dash-bonds-cri-cra
 
+## Deploy
+
+Este é um app **Flask** (não Streamlit) — o Streamlit Community Cloud não hospeda apps Flask,
+então o deploy é feito no [Render](https://render.com):
+
+1. Suba o repositório para o GitHub (se ainda não estiver lá).
+2. No dashboard do Render: **New > Blueprint**, aponte para o repositório — o `render.yaml`
+   na raiz já configura o serviço (build, start command com Gunicorn, Python 3.12).
+3. Aguarde o build. A URL pública fica em `https://<nome-do-serviço>.onrender.com`.
+
+Notas do plano gratuito do Render:
+
+- O serviço "dorme" após ~15 min sem tráfego; a primeira requisição depois disso demora
+  ~30-50s para religar (cold start).
+- O disco é efêmero: arquivos baixados em runtime via `/api/debentures/fetch` e
+  `/api/cricra/fetch` são perdidos a cada deploy/restart. Os arquivos já versionados em
+  `debentures/` e `cri-cra/` continuam disponíveis normalmente, pois vão junto no repositório.
+
 ## CVM
 
 O backend agora expõe uma base inicial para enriquecimento com dados da CVM:
